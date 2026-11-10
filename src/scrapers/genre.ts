@@ -21,24 +21,28 @@ export const scrapeSetOfGenres = async (
         protocol,
     } = req;
 
-    $('form.form-filter')
-        .find('div:nth-child(5) > select.form-control > option')
+    const seen = new Set<string>();
+
+    $('select[name="genre1"]')
+        .first()
+        .find('option')
         .each((i, el) => {
-            const target = $(el).text().split(' ');
+            const value = ($(el).attr('value') || '').trim().toLowerCase();
+            const text = $(el).text().trim();
+
+            if (!value || seen.has(value)) return;
+            seen.add(value);
+
+            const matchCount = text.match(/\((\d+)\)/);
+            const name = text.replace(/\(\d+\)/, '').trim();
+
             const obj = {} as ISetOfGenres;
+            obj['parameter'] = value;
+            obj['name'] = name || value;
+            obj['numberOfContents'] = matchCount ? Number(matchCount[1]) : 0;
+            obj['url'] = `${protocol}://${host}/genres/${value}`;
 
-            genres.map((genre) => {
-                if (genre === target[0].toLowerCase()) {
-                    obj['parameter'] = genre;
-                    obj['name'] = target[0];
-                    obj['numberOfContents'] = Number(
-                        target[1].substring(1, target[1].length - 1)
-                    );
-                    obj['url'] = `${protocol}://${host}/genres/${genre}`;
-
-                    payload.push(obj);
-                }
-            });
+            payload.push(obj);
         });
 
     return payload;

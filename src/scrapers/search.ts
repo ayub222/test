@@ -1,5 +1,5 @@
+import axios, { AxiosResponse } from 'axios';
 import cheerio from 'cheerio';
-import { AxiosResponse } from 'axios';
 import { Request } from 'express';
 import { ISearchedMoviesOrSeries } from '@/types';
 
@@ -20,56 +20,70 @@ export const scrapeSearchedMoviesOrSeries = async (
         protocol,
     } = req;
 
-    $('div.search-wrapper > div.search-item').each((i, el) => {
-        const content: cheerio.Cheerio = $(el).find('div.search-content');
-        const obj = {} as ISearchedMoviesOrSeries;
-        const genres: string[] = [];
+    const { title = '' } = req.params;
+    const { page = 1 } = req.query;
 
-        let type: 'movie' | 'series' = 'movie';
+    const searchUrl =
+        $('body').attr('data-search_url') || 'https://gudangvape.com/';
+    const thumbnailUrl =
+        $('body').attr('data-thumbnail_url') ||
+        'https://poster.assetsy.de/wp-content/uploads/';
 
-        $(el)
-            .find('p.cat-links > a')
-            .each((i, el2) => {
-                const x: string[] = $(el2).attr('href')?.split('/') || [];
+    try {
+        const apiUrl = `${
+            searchUrl.endsWith('/') ? searchUrl : `${searchUrl}/`
+        }search.php?s=${encodeURIComponent(title)}&page=${encodeURIComponent(
+            String(page || 1)
+        )}`;
 
-                if (x[1] === 'genre') genres.push(x[2]);
-                if (x[1] === 'series') type = 'series';
-            });
+        const apiRes = await axios.get(apiUrl, {
+            headers: {
+                Origin: process.env.LK21_URL || 'https://tv12.lk21official.cc',
+                Referer: `${
+                    process.env.LK21_URL || 'https://tv12.lk21official.cc'
+                }/`,
+            },
+        });
 
-        const movieId =
-            $(content).find('h2 > a').attr('href')?.split('/').reverse()[1] ||
-            '';
+        const items =
+            (apiRes.data && (apiRes.data.data || apiRes.data.items)) || [];
 
-        obj['_id'] = movieId;
-        obj['title'] = $(content).find('h2 > a').text();
-        obj['type'] = type;
-        obj['posterImg'] = `https://${$(el)
-            .find('figure > a > img')
-            .attr('src')}`;
-        obj['url'] = `${protocol}://${host}/${type}/${movieId}`;
-        obj['genres'] = genres;
+        if (Array.isArray(items)) {
+            items.forEach((item: any) => {
+                const slug = String(item.slug || '').replace(/^\/+|\/+$/g, '');
+                if (!slug) return;
 
-        /* eslint-disable */
-        $(content)
-            .find('p')
-            .each((i, el2) => {
-                switch ($(el2).find('strong').text().toLowerCase()) {
-                    case 'sutradara:':
-                        $(el2).find('strong').remove();
-                        obj['directors'] = $(el2).text().trim().split(', ');
-                        break;
-                    case 'bintang:':
-                        $(el2).find('strong').remove();
-                        obj['casts'] = $(el2).text().trim().split(', ');
-                        break;
-                    default:
-                        break;
+                const type: 'movie' | 'series' =
+                    item.type === 'series' ? 'series' : 'movie';
+                const routePrefix = type === 'series' ? 'series' : 'movies';
+
+                let posterImg = '';
+                if (item.poster) {
+                    try {
+                        posterImg = new URL(
+                            String(item.poster),
+                            thumbnailUrl
+                        ).toString();
+                    } catch {
+                        posterImg = String(item.poster);
+                    }
                 }
-            });
-        /* eslint-enable */
 
-        payload.push(obj);
-    });
+                payload.push({
+                    _id: slug,
+                    title: String(item.title || ''),
+                    type,
+                    posterImg,
+                    url: `${protocol}://${host}/${routePrefix}/${slug}`,
+                    genres: [],
+                    directors: [],
+                    casts: [],
+                });
+            });
+        }
+    } catch (err) {
+        console.error(err);
+    }
 
     return payload;
 };

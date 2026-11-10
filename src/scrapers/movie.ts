@@ -20,49 +20,50 @@ export const scrapeMovies = async (
         headers: { host },
     } = req;
 
-    $('main > div.container > section.archive')
-        .find('div.grid-archive > div#grid-wrapper > div.infscroll-item')
-        .each((i, el) => {
-            const parent: cheerio.Cheerio = $(el).find('article.mega-item');
-            const genres: string[] = [];
+    $('div.gallery-grid > article').each((i, el) => {
+        const genreRaw =
+            $(el).find('meta[itemprop="genre"]').attr('content') ||
+            $(el).find('figcaption div.genre').text() ||
+            '';
+        const genres: string[] = genreRaw
+            .split(',')
+            .map((g) => g.trim().toLowerCase().replace(/\s+/g, '-'))
+            .filter(Boolean);
 
-            $(parent)
-                .find('footer')
-                .find('div.grid-categories > a')
-                .each((i, el2) => {
-                    const x: string[] = $(el2).attr('href')?.split('/') ?? [];
+        const href =
+            $(el).find('figure > a').attr('href') ||
+            $(el).find('a').first().attr('href') ||
+            '';
+        const movieId = href.replace(/^\/+|\/+$/g, '').split('/').pop() ?? '';
 
-                    if (x.length > 0 && x[1] === 'genre') {
-                        genres.push(x[2]);
-                    }
-                });
+        const imgEl = $(el).find('figure img');
+        const rawSrc = imgEl.attr('src') || imgEl.attr('data-src') || '';
+        const posterImg = rawSrc.startsWith('http')
+            ? rawSrc
+            : rawSrc
+            ? `https:${rawSrc}`
+            : '';
 
-            const movieId: string =
-                $(parent)
-                    .find('figure > a')
-                    .attr('href')
-                    ?.split('/')
-                    .reverse()[1] ?? '';
+        const obj = {} as IMovies;
 
-            const obj = {} as IMovies;
+        obj['_id'] = movieId;
+        obj['title'] =
+            imgEl.attr('alt') ||
+            $(el).find('h3.poster-title').text().trim() ||
+            '';
+        obj['type'] = 'movie';
+        obj['posterImg'] = posterImg;
+        obj['rating'] =
+            $(el).find('span.rating [itemprop="ratingValue"]').text().trim() ||
+            $(el).find('span.rating').text().trim();
+        obj['url'] = `${protocol}://${host}/movies/${movieId}`;
+        obj['qualityResolution'] = $(el).find('span.label').text().trim();
+        obj['genres'] = genres;
 
-            obj['_id'] = movieId;
-            obj['title'] =
-                $(parent).find('figure > a > picture > img').attr('alt') ?? '';
-            obj['type'] = 'movie';
-            obj['posterImg'] = `https:${$(parent)
-                .find('figure > a > picture > img')
-                .attr('src')}`;
-            obj['rating'] = $(parent).find('figure').find('div.rating').text();
-            obj['url'] = `${protocol}://${host}/movies/${movieId}`;
-            obj['qualityResolution'] = $(parent)
-                .find('figure')
-                .find('div.quality')
-                .text();
-            obj['genres'] = genres;
-
+        if (movieId) {
             payload.push(obj);
-        });
+        }
+    });
 
     return payload;
 };
@@ -87,69 +88,87 @@ export const scrapeMovieDetails = async (
     const countries: string[] = [];
     const casts: string[] = [];
 
-    $('div.content').find('blockquote').find('strong').remove();
-
-    obj['_id'] = originalUrl.split('/').reverse()[0];
-    obj['title'] =
-        $('div.content-poster').find('figure > picture > img').attr('alt') ??
-        '';
+    obj['_id'] = originalUrl.split('/').filter(Boolean).pop() ?? '';
+    obj['title'] = $('div.movie-info > h1').first().text().trim();
     obj['type'] = 'movie';
-    obj['posterImg'] = `https:${$('div.content-poster')
-        .find('figure > picture > img')
-        .attr('src')}`;
 
-    $('div.content > div').each((i, el) => {
-        /* eslint-disable */
-        switch ($(el).find('h2').text().toLowerCase()) {
-            case 'durasi':
-                obj['duration'] = $(el).find('h3').text().trim();
-                break;
-            case 'imdb':
-                obj['rating'] = $(el).find('h3:nth-child(2)').text().trim();
-                break;
-            case 'diterbitkan':
-                obj['releaseDate'] = $(el).find('h3').text().trim();
-                break;
-            case 'kualitas':
-                obj['quality'] = $(el).find('h3 > a').text().trim();
-                break;
-            case 'sutradara':
-                $(el)
-                    .find('h3 > a')
-                    .each((i, el) => {
-                        directors.push($(el).text().trim());
-                    });
-                break;
-            case 'negara':
-                $(el)
-                    .find('h3 > a')
-                    .each((i, el) => {
-                        countries.push($(el).text());
-                    });
-                break;
-            case 'genre':
-                $(el)
-                    .find('h3 > a')
-                    .each((i, el) => {
-                        genres.push($(el).text());
-                    });
-                break;
-            case 'bintang film':
-                $(el)
-                    .find('h3')
-                    .each((i, el) => {
-                        casts.push($(el).find('a').text());
-                    });
-                break;
-            default:
-                break;
+    const detailImg = $('div.meta-info div.detail img');
+    const rawPoster =
+        detailImg.attr('data-src') ||
+        detailImg.attr('src') ||
+        $('#videoAd').attr('poster') ||
+        '';
+    obj['posterImg'] = rawPoster.startsWith('http')
+        ? rawPoster
+        : rawPoster
+        ? `https:${rawPoster}`
+        : '';
+
+    const qualities: string[] = [];
+    let duration = '';
+    $('div.movie-info div.info-tag > span').each((i, el) => {
+        const text = $(el).text().trim();
+        if (!text) return;
+        if (/\d+\s*(h|m|min|jam|menit)/i.test(text)) {
+            duration = text;
+        } else if (!/^\d+\+$|^SU$|^R$|^PG/i.test(text)) {
+            qualities.push(text);
         }
-        /* eslint-enable */
     });
 
-    obj['synopsis'] = $('div.content').find('blockquote').text();
-    obj['trailerUrl'] =
-        $('div.action-player').find('a.fancybox').attr('href') ?? '';
+    obj['quality'] = qualities.join(' ');
+    obj['duration'] = duration;
+    obj['rating'] = $('div.rating-score span.rating-number').text().trim();
+    obj['releaseDate'] = '';
+
+    $('div.movie-info div.tag-list a').each((i, el) => {
+        const href = $(el).attr('href') || '';
+        const text = $(el).text().trim();
+        if (href.includes('/genre/') && text && !genres.includes(text)) {
+            genres.push(text);
+        } else if (
+            href.includes('/country/') &&
+            text &&
+            !countries.includes(text)
+        ) {
+            countries.push(text);
+        }
+    });
+
+    $('div.meta-info div.detail > p').each((i, el) => {
+        const label = $(el).find('span').first().text().toLowerCase().trim();
+        if (label.includes('sutradara')) {
+            $(el)
+                .find('a')
+                .each((_, a) => {
+                    const name = $(a).text().trim();
+                    if (name) directors.push(name);
+                });
+        } else if (label.includes('bintang')) {
+            $(el)
+                .find('a')
+                .each((_, a) => {
+                    const name = $(a).text().trim();
+                    if (name) casts.push(name);
+                });
+        } else if (label.includes('negara')) {
+            $(el)
+                .find('a')
+                .each((_, a) => {
+                    const name = $(a).text().trim();
+                    if (name && !countries.includes(name)) {
+                        countries.push(name);
+                    }
+                });
+        } else if (label.includes('release') || label.includes('diterbitkan')) {
+            const clone = $(el).clone();
+            clone.find('span').remove();
+            obj['releaseDate'] = clone.text().trim();
+        }
+    });
+
+    obj['synopsis'] = $('div.meta-info div.synopsis').text().trim();
+    obj['trailerUrl'] = $('a.yt-lightbox').first().attr('href') ?? '';
     obj['genres'] = genres;
     obj['directors'] = directors;
     obj['countries'] = countries;

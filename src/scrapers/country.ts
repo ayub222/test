@@ -21,28 +21,29 @@ export const scrapeSetOfCountries = async (
         headers: { host },
     } = req;
 
-    $('select#country > option').each((i, el) => {
-        const target: string[] = $(el).text().split(' ').reverse();
-        const parameters = [...target];
-        parameters.shift();
+    const seen = new Set<string>();
 
-        const obj = {} as ISetOfCountries;
+    $('select[name="country"], select#country')
+        .first()
+        .find('option')
+        .each((i, el) => {
+            const value = ($(el).attr('value') || '').trim().toLowerCase();
+            const text = $(el).text().trim();
 
-        countries.map((country) => {
-            if (country.parameter === parameters.join('-').toLowerCase()) {
-                obj['parameter'] = country.parameter;
-                obj['name'] = country.name;
-                obj['numberOfContents'] = Number(
-                    target[0].substring(1, target[0].length - 1)
-                );
-                obj[
-                    'url'
-                ] = `${protocol}://${host}/countries/${country.parameter}`;
+            if (!value || seen.has(value)) return;
+            seen.add(value);
 
-                payload.push(obj);
-            }
+            const matchCount = text.match(/\((\d+)\)/);
+            const name = text.replace(/\(\d+\)/, '').trim();
+
+            const obj = {} as ISetOfCountries;
+            obj['parameter'] = value;
+            obj['name'] = name || value;
+            obj['numberOfContents'] = matchCount ? Number(matchCount[1]) : 0;
+            obj['url'] = `${protocol}://${host}/countries/${value}`;
+
+            payload.push(obj);
         });
-    });
 
     return payload;
 };

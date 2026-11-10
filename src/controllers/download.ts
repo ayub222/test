@@ -19,19 +19,8 @@ export const downloadMovie: TController = async (req, res) => {
 
         const movieId = originalUrl.split('/').reverse()[1];
 
-        const cookie = await getCookie(movieId);
-
-        const axiosRequest = await axios.post(
-            `https://dl.lk21static.xyz/verifying.php`,
-            { slug: movieId },
-            {
-                headers: {
-                    'content-type':
-                        'application/x-www-form-urlencoded; charset=UTF-8',
-                    'Accept-Encoding': 'application/json',
-                    cookie: cookie,
-                },
-            }
+        const axiosRequest = await axios.get(
+            `${process.env.LK21_URL}/${movieId}`
         );
         const payload = await scrapeDownloads(req, axiosRequest);
 
@@ -60,20 +49,8 @@ export const downloadSeries: TController = async (req, res) => {
 
         const seriesId = _ids.join('-');
 
-        const cookie = await getCookie(
-            `${seriesId}-season-${season}-episode-${episode}-${year}`
-        );
-        const axiosRequest = await axios.post(
-            `https://dl.lk21static.xyz/verifying.php`,
-            { slug: `${seriesId}-season-${season}-episode-${episode}-${year}` },
-            {
-                headers: {
-                    'content-type':
-                        'application/x-www-form-urlencoded; charset=UTF-8',
-                    'Accept-Encoding': 'application/json',
-                    cookie: cookie,
-                },
-            }
+        const axiosRequest = await axios.get(
+            `${process.env.ND_URL}/${seriesId}-season-${season}-episode-${episode}-${year}`
         );
 
         const payload = await scrapeDownloads(req, axiosRequest);

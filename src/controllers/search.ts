@@ -15,7 +15,7 @@ export const searchedMoviesOrSeries: TController = async (req, res) => {
         const { title = '' } = req.params;
 
         const axiosRequest = await axios.get(
-            `${process.env.LK21_URL}/?s=${title}`
+            `${process.env.LK21_URL}/search?s=${encodeURIComponent(title)}`
         );
 
         const payload = await scrapeSearchedMoviesOrSeries(req, axiosRequest);

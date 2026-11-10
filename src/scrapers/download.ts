@@ -22,13 +22,52 @@ export const scrapeDownloads = async (
         let server = $(el).find('strong').text()!;
         let link = $(el).find('a').attr('href')!;
         //@ts-ignore
-        let quality = $(el).find('a').attr('class').substring(9, 13);
-        downloads.push({
-            server,
-            link,
-            quality,
-        });
+        let quality = $(el).find('a').attr('class')?.substring(9, 13) || '';
+        if (link) {
+            downloads.push({
+                server,
+                link,
+                quality,
+            });
+        }
     });
+
+    if (downloads.length === 0) {
+        const qualities: string[] = [];
+        $('div.movie-info div.info-tag > span').each((i, el) => {
+            const text = $(el).text().trim();
+            if (
+                text &&
+                !/\d+\s*(h|m|min|jam|menit)/i.test(text) &&
+                !/^\d+\+$|^SU$|^R$|^PG/i.test(text)
+            ) {
+                qualities.push(text);
+            }
+        });
+        const quality = qualities.join(' ') || 'HD';
+
+        let dlLink = '';
+        $('div.movie-action a, nav.mobile-bottom-bar a').each((i, el) => {
+            const href = $(el).attr('href') || '';
+            const text = $(el).text().trim().toLowerCase();
+            if (
+                !dlLink &&
+                href.startsWith('http') &&
+                (text.includes('download') ||
+                    $(el).find('i.fa-download').length > 0)
+            ) {
+                dlLink = href;
+            }
+        });
+
+        if (dlLink) {
+            downloads.push({
+                server: 'LK21 Download Portal',
+                link: dlLink,
+                quality,
+            });
+        }
+    }
 
     return downloads;
 };

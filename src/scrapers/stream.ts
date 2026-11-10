@@ -16,25 +16,26 @@ export const scrapeStreamSources = async (
     const $: cheerio.Root = cheerio.load(res.data);
     const payload: IStreamSources[] = [];
 
-    $('div#load-sources')
-        .find('ul > li')
-        .each((i, el) => {
-            const obj = {} as IStreamSources;
+    $('ul#player-list > li').each((i, el) => {
+        const a = $(el).find('a');
+        const obj = {} as IStreamSources;
 
-            const resolutions: string[] = [];
+        const resolutions: string[] = [];
 
-            $(el)
-                .find('div > span')
-                .each((i, el2) => {
-                    resolutions.push($(el2).text());
-                });
+        $(el)
+            .find('div > span')
+            .each((i, el2) => {
+                resolutions.push($(el2).text());
+            });
 
-            obj['provider'] = $(el).find('a').text();
-            obj['url'] = $(el).find('a').attr('href') ?? '';
-            obj['resolutions'] = resolutions;
+        obj['provider'] = a.text().trim() || a.attr('data-server') || '';
+        obj['url'] = a.attr('data-url') || a.attr('href') || '';
+        obj['resolutions'] = resolutions;
 
+        if (obj['url']) {
             payload.push(obj);
-        });
+        }
+    });
 
     return payload;
 };
