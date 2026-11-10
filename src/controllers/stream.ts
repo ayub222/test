@@ -12,12 +12,11 @@ type TController = (req: Request, res: Response, next?: Next) => Promise<void>;
  */
 export const streamMovie: TController = async (req, res) => {
     try {
-        const { originalUrl } = req;
-
-        const movieId = originalUrl.split('/').reverse()[1];
+        const { id, movieId } = req.params;
+        const targetId = id || movieId || req.originalUrl.split('/').filter(Boolean).slice(-2)[0];
 
         const axiosRequest = await axios.get(
-            `${process.env.LK21_URL}/${movieId}`
+            `${process.env.LK21_URL}/${targetId}`
         );
 
         const payload = await scrapeStreamSources(req, axiosRequest);
@@ -38,16 +37,16 @@ export const streamMovie: TController = async (req, res) => {
  */
 export const streamSeries: TController = async (req, res) => {
     try {
-        const { originalUrl } = req;
+        const { id, seriesId } = req.params;
+        const targetSeriesId = id || seriesId || req.originalUrl.split('/').filter(Boolean).slice(-2)[0];
         const { season = 1, episode = 1 } = req.query;
 
-        const _ids = originalUrl.split('/').reverse()[1].split('-');
+        const _ids = targetSeriesId.split('-');
         const year = _ids.pop();
-
-        const seriesId = _ids.join('-');
+        const baseSeriesId = _ids.join('-');
 
         const axiosRequest = await axios.get(
-            `${process.env.ND_URL}/${seriesId}-season-${season}-episode-${episode}-${year}`
+            `${process.env.ND_URL}/${baseSeriesId}-season-${season}-episode-${episode}-${year}`
         );
 
         const payload = await scrapeStreamSources(req, axiosRequest);
