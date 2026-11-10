@@ -6,6 +6,27 @@ dotenv.config();
 process.env.LK21_URL = process.env.LK21_URL || 'https://tv12.lk21official.cc';
 process.env.ND_URL = process.env.ND_URL || 'https://tv1.layanfilem.my';
 process.env.DL_URL = process.env.DL_URL || 'https://dadadidi.de';
+process.env.SCRAPER_API_KEY =
+    process.env.SCRAPER_API_KEY || 'cda4f4641c6de6313838a5cf6e5595a1';
+
+// Intercept outgoing GET requests to LK21 / NontonDrama to route via ScraperAPI if configured
+axios.interceptors.request.use((config) => {
+    const key = process.env.SCRAPER_API_KEY;
+    if (key && config.url && config.method?.toLowerCase() === 'get') {
+        const urlStr = config.url;
+        if (
+            urlStr.includes('lk21official') ||
+            urlStr.includes('layanfilem') ||
+            urlStr.includes('lk21.de') ||
+            urlStr.includes('nontondrama')
+        ) {
+            config.url = `https://api.scraperapi.com/?api_key=${key}&url=${encodeURIComponent(
+                urlStr
+            )}`;
+        }
+    }
+    return config;
+});
 
 axios.defaults.headers.common['User-Agent'] =
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
