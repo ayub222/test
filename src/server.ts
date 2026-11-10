@@ -2,10 +2,14 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+process.env.LK21_URL = process.env.LK21_URL || 'https://tv12.lk21official.cc';
+process.env.ND_URL = process.env.ND_URL || 'https://tv1.layanfilem.my';
+process.env.DL_URL = process.env.DL_URL || 'https://dadadidi.de';
+
 import express, { Application, Request, Response } from 'express';
 import morgan from 'morgan';
 import cors from 'cors';
-import routes from '@/routes';
+import routes from './routes';
 
 const app: Application = express();
 
