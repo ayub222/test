@@ -23,10 +23,15 @@ export const latestMovies: TController = async (req, res) => {
         const payload = await scrapeMovies(req, axiosRequest);
 
         res.status(200).json(payload);
-    } catch (err) {
+    } catch (err: any) {
         console.error(err);
 
-        res.status(400).json(null);
+        res.status(400).json({
+            error: err?.message || 'Error occurred',
+            code: err?.code,
+            responseStatus: err?.response?.status,
+            responseData: typeof err?.response?.data === 'string' ? err.response.data.slice(0, 300) : err?.response?.data
+        });
     }
 };
 
@@ -50,10 +55,15 @@ export const popularMovies: TController = async (req, res) => {
         const payload = await scrapeMovies(req, axiosRequest);
 
         res.status(200).json(payload);
-    } catch (err) {
+    } catch (err: any) {
         console.error(err);
 
-        res.status(400).json(null);
+        res.status(400).json({
+            error: err?.message || 'Error occurred',
+            code: err?.code,
+            responseStatus: err?.response?.status,
+            responseData: typeof err?.response?.data === 'string' ? err.response.data.slice(0, 300) : err?.response?.data
+        });
     }
 };
 
@@ -76,10 +86,15 @@ export const recentReleaseMovies: TController = async (req, res) => {
         const payload = await scrapeMovies(req, axiosRequest);
 
         res.status(200).json(payload);
-    } catch (err) {
+    } catch (err: any) {
         console.error(err);
 
-        res.status(400).json(null);
+        res.status(400).json({
+            error: err?.message || 'Error occurred',
+            code: err?.code,
+            responseStatus: err?.response?.status,
+            responseData: typeof err?.response?.data === 'string' ? err.response.data.slice(0, 300) : err?.response?.data
+        });
     }
 };
 
@@ -102,10 +117,15 @@ export const topRatedMovies: TController = async (req, res) => {
         const payload = await scrapeMovies(req, axiosRequest);
 
         res.status(200).json(payload);
-    } catch (err) {
+    } catch (err: any) {
         console.error(err);
 
-        res.status(400).json(null);
+        res.status(400).json({
+            error: err?.message || 'Error occurred',
+            code: err?.code,
+            responseStatus: err?.response?.status,
+            responseData: typeof err?.response?.data === 'string' ? err.response.data.slice(0, 300) : err?.response?.data
+        });
     }
 };
 
@@ -124,9 +144,14 @@ export const movieDetails: TController = async (req, res) => {
         const payload = await scrapeMovieDetails(req, axiosRequest);
 
         res.status(200).json(payload);
-    } catch (err) {
+    } catch (err: any) {
         console.error(err);
 
-        res.status(400).json(null);
+        res.status(400).json({
+            error: err?.message || 'Error occurred',
+            code: err?.code,
+            responseStatus: err?.response?.status,
+            responseData: typeof err?.response?.data === 'string' ? err.response.data.slice(0, 300) : err?.response?.data
+        });
     }
 };
